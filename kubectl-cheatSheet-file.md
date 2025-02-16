@@ -117,5 +117,14 @@ kubectl delete namespace my-namespace     # Delete a namespace and all its resou
 - [Kubectl Cheat Sheet](https://kubernetes.io/docs/reference/kubectl/cheatsheet/)
 
 ---
+##  Genral Commands used by me
+```bash
+kubectl set image deployment/nginx-deployment  -n nginx nginx=nginx:1.27.3  # change nginx image version
+kubectl delete -f nginx-deployment.yml # for deleting total deployment 
+kubectl get replicaset -n nginx # for getting replicaset pod running count
+```
+
+---
+
 
 This cheat sheet provides commonly used `kubectl` commands for managing Kubernetes clusters. 🚀
