@@ -1,4 +1,4 @@
-# 🚀 Kubernetes Ingress Guide
+# 🚀 Kubernetes Ingress Guide (Using Kind)
 
 ## 📌 What is Kubernetes Ingress?
 Kubernetes **Ingress** is used to expose services running inside a cluster to the external world using HTTP(S) routing. It provides a way to manage access to multiple services using a single external IP, reducing the need for multiple LoadBalancers or NodePorts.
@@ -12,21 +12,45 @@ Kubernetes **Ingress** is used to expose services running inside a cluster to th
 
 ---
 
-## 🏗 How to Set Up Ingress in Kubernetes
+## 🏗 How to Set Up Ingress in Kubernetes (Using Kind)
 
-### **1️⃣ Deploy an Ingress Controller**
-For **Minikube**, enable the built-in NGINX Ingress controller:
-```bash
-minikube addons enable ingress
+### **1️⃣ Create a Kind Cluster with Ingress Support**
+Create a `kind-config.yaml` file with the following content:
+```yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 80  # Map HTTP
+        hostPort: 80
+      - containerPort: 443  # Map HTTPS
+        hostPort: 443
 ```
-For **cloud-managed Kubernetes clusters (EKS, AKS, GKE)**, install an NGINX Ingress controller:
+Now create the cluster:
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
+kind create cluster --config kind-config.yaml
 ```
 
 ---
 
-### **2️⃣ Create an Ingress Resource**
+### **2️⃣ Deploy an NGINX Ingress Controller**
+Apply the official NGINX Ingress controller manifest:
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+```
+
+Wait for the Ingress controller to be ready:
+```bash
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=90s
+```
+
+---
+
+### **3️⃣ Create an Ingress Resource**
 Create a file `my-ingress.yaml` with the following content:
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -37,7 +61,7 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   rules:
-  - host: myapp.example.com
+  - host: myapp.local
     http:
       paths:
       - path: /app1
@@ -58,30 +82,30 @@ spec:
 
 ---
 
-### **3️⃣ Apply the Ingress Resource**
+### **4️⃣ Apply the Ingress Resource**
 ```bash
 kubectl apply -f my-ingress.yaml
 ```
 
 ---
 
-### **4️⃣ Update DNS or /etc/hosts (For Local Testing)**
-If running locally, map the domain (`myapp.example.com`) in `/etc/hosts`:
+### **5️⃣ Update /etc/hosts for Local Testing**
+Since Kind runs inside Docker, map the domain `myapp.local` to `127.0.0.1`:
 ```bash
-echo "$(minikube ip) myapp.example.com" | sudo tee -a /etc/hosts
+echo "127.0.0.1 myapp.local" | sudo tee -a /etc/hosts
 ```
 
 ---
 
-### **5️⃣ Verify Ingress is Working**
+### **6️⃣ Verify Ingress is Working**
 Check ingress status:
 ```bash
 kubectl get ingress
 ```
 Test in the browser or use `curl`:
 ```bash
-curl http://myapp.example.com/app1
-curl http://myapp.example.com/app2
+curl http://myapp.local/app1
+curl http://myapp.local/app2
 ```
 
 ---
@@ -91,14 +115,13 @@ curl http://myapp.example.com/app2
 - **Traefik** (lightweight and dynamic configuration)
 - **HAProxy Ingress** (high performance)
 - **Contour** (designed for Envoy proxy)
-- **AWS ALB Ingress** (AWS-specific solution)
 
 ---
 
 ## 🏆 When to Use Ingress?
 ✅ When you need **domain-based routing** for multiple services.
 ✅ When you want to **terminate SSL/TLS** at the Kubernetes level.
-✅ When you need a **cost-effective alternative** to cloud LoadBalancers.
+✅ When you need a **cost-effective alternative** to LoadBalancers.
 
 ---
 
